@@ -1,0 +1,194 @@
+// Prisma Schema for Electropathy AI
+// Database: PostgreSQL on Supabase
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------
+// 1. User & Authentication Models
+// ---------------------------------------------
+
+model User {
+  id             String          @id @default(uuid())
+  mobileNumber   String          @unique
+  fullName       String?
+  email          String?
+  passwordHash   String?         // Used for Admin credentials
+  userType       String?         // 'patient', 'practitioner', 'student', 'researcher'
+  preferredLang  String          @default("en") // 'en', 'hi', 'mr'
+  role           String          @default("patient") // 'patient', 'practitioner', 'admin'
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  refreshTokens  RefreshToken[]
+  patientCases   PatientCase[]
+  conversations  Conversation[]
+  auditLogs      AuditLog[]
+
+  @@map("users")
+}
+
+model OtpVerification {
+  id           String    @id @default(uuid())
+  mobileNumber String
+  otpHash      String
+  attempts     Int       @default(0)
+  expiresAt    DateTime
+  isUsed       Boolean   @default(false)
+  lastSentAt   DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+
+  @@index([mobileNumber])
+  @@map("otp_verifications")
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String
+  expiresAt  DateTime
+  isRevoked  Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, isRevoked])
+  @@map("refresh_tokens")
+}
+
+// ---------------------------------------------
+// 2. Patient Case & Intake Models
+// ---------------------------------------------
+
+model PatientCase {
+  id                  String             @id @default(uuid())
+  practitionerId      String
+  practitioner        User               @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
+  patientName         String
+  age                 Int
+  gender              String             // 'male', 'female', 'other'
+  contactNumber       String
+  city                String?
+  occupation          String?
+  chiefComplaints     Json               // [{complaint, duration, severity, factors}]
+  presentIllness      Json               // {description, previousTreatments, responseToTreatment}
+  pastMedical         Json               // {chronicConditions[], surgeries, allergies[]}
+  lifestyle           Json               // {diet, sleep, appetite, stressLevel}
+  electropathyDetails Json?              // {temperament, previousElectropathy, notes}
+  status              String             @default("submitted") // 'draft', 'submitted', 'in_review', 'completed'
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  documents           PatientDocument[]
+
+  @@index([practitionerId, createdAt(sort: Desc)])
+  @@index([status])
+  @@map("patient_cases")
+}
+
+model PatientDocument {
+  id          String       @id @default(uuid())
+  caseId      String
+  patientCase PatientCase  @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  fileName    String
+  fileType    String?
+  fileUrl     String
+  fileSize    Int?
+  uploadedAt  DateTime     @default(now())
+
+  @@index([caseId])
+  @@map("patient_documents")
+}
+
+// ---------------------------------------------
+// 3. Conversational AI & Chat History Models
+// ---------------------------------------------
+
+model Conversation {
+  id         String     @id @default(uuid())
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title      String?
+  language   String     @default("en")
+  isDeleted  Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  messages   Message[]
+
+  @@index([userId, isDeleted, updatedAt(sort: Desc)])
+  @@index([isDeleted, updatedAt(sort: Desc)])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String       // 'user', 'assistant', 'system'
+  content        String
+  feedback       String?      // 'helpful', 'not_helpful'
+  metadata       Json?        // {model, tokens, latencyMs}
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt(sort: Asc)])
+  @@map("messages")
+}
+
+// ---------------------------------------------
+// 4. Knowledge Base & RAG Engine Models
+// ---------------------------------------------
+
+model KnowledgeDocument {
+  id           String            @id @default(uuid())
+  fileName     String
+  fileType     String?
+  fileUrl      String?
+  status       String            @default("uploaded") // 'uploaded', 'processing', 'parsed', 'approved', 'rejected'
+  totalChunks  Int               @default(0)
+  createdAt    DateTime          @default(now())
+  chunks       KnowledgeChunk[]
+
+  @@map("knowledge_documents")
+}
+
+model KnowledgeChunk {
+  id          String             @id @default(uuid())
+  documentId  String
+  document    KnowledgeDocument  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  content     String
+  category    String?            // 'Diseases', 'Symptoms', 'Medicines', 'Dosage', etc.
+  language    String             @default("en")
+  pageNumber  Int?
+  chunkIndex  Int?
+  metadata    Json?
+  isApproved  Boolean            @default(false)
+  isEnabled   Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+
+  @@index([documentId])
+  @@index([category, isApproved, isEnabled])
+  @@map("knowledge_chunks")
+}
+
+// ---------------------------------------------
+// 5. Audit Logging for Administrative Actions
+// ---------------------------------------------
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  adminId    String
+  admin      User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  action     String   // 'ADMIN_LOGIN', 'VIEW_USER', 'UPDATE_USER_STATUS', 'VIEW_CONVERSATION', 'VIEW_PATIENT_CASE'
+  targetId   String?  // Target resource ID
+  details    Json?    // Contextual information
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([adminId, createdAt(sort: Desc)])
+  @@index([action, createdAt(sort: Desc)])
+  @@map("audit_logs")
+}

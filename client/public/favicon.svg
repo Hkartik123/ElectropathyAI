@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F4C81"/>
+      <stop offset="50%" stop-color="#028090"/>
+      <stop offset="100%" stop-color="#00A896"/>
+    </linearGradient>
+    <linearGradient id="leafGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="50%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#34D399"/>
+    </linearGradient>
+    <linearGradient id="pulseGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="50%" stop-color="#22D3EE"/>
+      <stop offset="100%" stop-color="#67E8F9"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background Icon Container with gentle shadow and rounded corners -->
+  <rect width="64" height="64" rx="16" fill="url(#bgGrad)"/>
+  <rect width="62" height="62" x="1" y="1" rx="15" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+
+  <!-- Clinical Cross (Subtle White Silhouette) -->
+  <path d="M26 14 H38 V26 H50 V38 H38 V50 H26 V38 H14 V26 H26 Z" 
+        fill="#FFFFFF" 
+        fill-opacity="0.22" 
+        stroke="rgba(255,255,255,0.4)" 
+        stroke-width="1.2"
+        stroke-linejoin="round"/>
+
+  <!-- Botanical Herbal Leaf -->
+  <path d="M30 48 C30 36 34 26 46 18 C46 30 42 42 30 48 Z" 
+        fill="url(#leafGrad)"/>
+  <path d="M30 48 Q37 34 46 18" 
+        stroke="#A7F3D0" 
+        stroke-width="1.5" 
+        stroke-linecap="round"/>
+
+  <!-- Vital Electro-Pulse Wave (Heartbeat / Bio-Electricity) -->
+  <path d="M10 32 L22 32 L26 23 L31 41 L35 27 L39 35 L43 32 L54 32" 
+        stroke="url(#pulseGrad)" 
+        stroke-width="3" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"
+        filter="url(#glow)"/>
+</svg>
